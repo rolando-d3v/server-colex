@@ -1,0 +1,34 @@
+# IDEs and Editors
+/dist/
+.angular/
+.vscode/
+.idea/
+*.log
+*.bak
+
+# Node and environment
+/node_modules
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+.npm/
+
+# Compilation output
+/out-tsc/
+/tmp/
+
+# Production/Build artifacts (Archivos de compilación)
+/build/
+
+# Testing (Pruebas)
+/coverage
+/karma.log
+
+# Mac / OSX
+.DS_Store
+
+# Windows
+Thumbs.db
+
+.env
+/src/generated/prisma

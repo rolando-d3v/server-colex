@@ -1,0 +1,38 @@
+.footer {
+  display: grid;
+  place-items: center;
+  background-color: #393c43;
+  border-radius: 4px;
+  width: 100%;
+  padding: 10px 0;
+}
+
+section {
+  display: grid;
+  grid-template-rows: 25px ;
+  grid-template-columns: 1fr;
+  width: 100%;
+  padding: 8px 16px 10px 16px;
+}
+
+.content_title {
+ 
+
+    .text {
+      color: var(--text-dia);
+      text-transform: uppercase;
+      font-family: "Montserrat", sans-serif;
+      font-size: 9.8px;
+      font-weight: 800;
+      transition: 0.3s all ease;
+      display: block;
+      box-sizing: border-box;
+      text-align: center;
+      &:hover {
+        color: var(--text-white);
+      }
+    }
+
+ 
+  
+}
