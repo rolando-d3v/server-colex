@@ -33,7 +33,8 @@ export const authLogin = async (req: Request, res: Response) => {
 	                        	json_agg(
 	                        		json_build_object(
 	                        			'id', r.id,
-	                        			'nombre', r.nombre
+	                        			'nombre', r.nombre,
+	                        			'icono', r.icono
 	                        		)
 	                        	) AS roles
 	                            FROM usuario u
@@ -66,8 +67,6 @@ export const authLogin = async (req: Request, res: Response) => {
           codigo_usuario: User.codigo_usuario,
           colegio_id: User.colegio_id,
         },
-        roles: User.roles,
-        ok: true,
       },
       var_env.SECRET_TOKEN,
       { expiresIn: "5h" },
@@ -165,29 +164,48 @@ export const authMe = async (req: Request, res: Response) => {
         codigo_usuario: string;
         colegio_id: number;
       },
-      roles: {
-        id: string;
-        nombre: string;
-      }
     };
 
-    // Opcional: verificar que el usuario sigue activo en BD
-    const usuario = await prisma.usuario.findFirst({
-      where: { id: decoded.user.id, is_active: true },
-      select: {
-        id: true,
-        codigo_usuario: true,
-      },
-    });
+
+    const users = await sql`
+                          SELECT 
+	                        	u.id,
+	                        	u.persona_id,
+	                        	u.codigo_usuario,
+	                        	u.colegio_id,
+	                        	u.password,
+	                        	u.is_active,
+	                        	json_agg(
+	                        		json_build_object(
+	                        			'id', r.id,
+	                        			'nombre', r.nombre,
+	                        			'icono', r.icono
+	                        		)
+	                        	) AS roles
+	                            FROM usuario u
+	                            INNER JOIN usuario_rol ur ON ur.usuario_id = u.id
+	                            INNER JOIN rol r ON r.id = ur.rol_id
+	                            WHERE u.codigo_usuario = ${decoded.user.codigo_usuario}
+	                            AND u.is_active = true
+	                            AND ur.is_active = true
+	                            GROUP BY u.id;
+                        `
+
+    const User = users[0]
 
 
-    if (!usuario) {
+    if (!User) {
       return res.status(401).json({ msj: "Usuario no válido" });
     }
 
     return res.status(200).json({
-      user: decoded.user,
-      roles: decoded.roles
+      user: {
+        id: User.id,
+        personal_id: User.persona_id,
+        codigo_usuario: User.codigo_usuario,
+        colegio_id: User.colegio_id,
+      },
+      roles: User.roles
     });
   } catch (err) {
     // Token expirado o inválido
@@ -195,6 +213,13 @@ export const authMe = async (req: Request, res: Response) => {
   }
 };
 
+
+
+
+
+
+//? AUTH LOGOUT
+//? ***********************************************************************************************/
 export const authLogout = async (req: Request, res: Response) => {
   res.clearCookie("token", {
     httpOnly: true, // 🔒 no accesible desde JS
