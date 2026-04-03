@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { RequestHandler } from "express";
 import { var_env } from "../../config_env";
 import bcrypt from "bcrypt";
 import { prisma } from "../../db/db_conexion";
+import sql from "../../db/postgres";
 
 //? AUTH
 //? ***********************************************************************************************/
@@ -18,18 +18,41 @@ export const authLogin = async (req: Request, res: Response) => {
         .json({ msj: "Campos requeridos: codigo y password ❗️" });
     }
 
-    const existe_user = await prisma.usuario.findFirst({
-      where: {
-        codigo_usuario: codigo,
-        is_active: true,
-      },
-    });
+    //? Formatear codigo a minuscula
+    const codigoFormt = codigo.toLowerCase()
 
-    if (!existe_user) {
+
+    const users = await sql`
+                          SELECT 
+	                        	u.id,
+	                        	u.persona_id,
+	                        	u.codigo_usuario,
+	                        	u.colegio_id,
+	                        	u.password,
+	                        	u.is_active,
+	                        	json_agg(
+	                        		json_build_object(
+	                        			'id', r.id,
+	                        			'nombre', r.nombre
+	                        		)
+	                        	) AS roles
+	                            FROM usuario u
+	                            INNER JOIN usuario_rol ur ON ur.usuario_id = u.id
+	                            INNER JOIN rol r ON r.id = ur.rol_id
+	                            WHERE u.codigo_usuario = ${codigoFormt}
+	                            AND u.is_active = true
+	                            AND ur.is_active = true
+	                            GROUP BY u.id;
+                        `
+
+    const User = users[0]
+
+
+    if (!User) {
       return res.status(401).json({ msj: "Credenciales inválidas ❗️" });
     }
 
-    const passCompare = await bcrypt.compare(password, existe_user.password);
+    const passCompare = await bcrypt.compare(password, User.password);
 
     if (!passCompare) {
       return res.status(401).json({ msn: "Credenciales inválidas ❗️" });
@@ -37,10 +60,13 @@ export const authLogin = async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       {
-        id: existe_user.id,
-        persona_id: existe_user.persona_id,
-        codigo_usuario: existe_user.codigo_usuario,
-        colegio_id: existe_user.colegio_id,
+        user: {
+          id: User.id,
+          personal_id: User.persona_id,
+          codigo_usuario: User.codigo_usuario,
+          colegio_id: User.colegio_id,
+        },
+        roles: User.roles,
         ok: true,
       },
       var_env.SECRET_TOKEN,
@@ -55,13 +81,26 @@ export const authLogin = async (req: Request, res: Response) => {
       maxAge: 1000 * 60 * 60 * 5, // 1 hora
     });
 
-    return res.status(200).json({ msj: "Login exitoso ✔️" });
+    return res.status(200).json({
+      msj: "Login exitoso ✔️",
+      user: {
+        id: User.id,
+        personal_id: User.persona_id,
+        codigo_usuario: User.codigo_usuario,
+        colegio_id: User.colegio_id,
+      },
+      roles: User.roles
+    });
   } catch (err) {
     console.log(err);
     console.error("[authLogin]", err);
     return res.status(500).json({ msj: "Error interno del servidor ❗️", err });
   }
 };
+
+
+
+
 
 //? REGISTER USER CON AUTH
 //? **********************************************************************************************/
@@ -107,39 +146,7 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 };
 
-//? AUTH ME
-//? ***********************************************************************************************/
-// export const postVerifyAuth = async (req: Request, res: Response) => {
-//   try {
-//     const existeToken = req.header("Authorization");
 
-//     if (!existeToken) {
-//       res
-//         .status(401)
-//         .json({ ok: false, message: "Acceso denegado: token requerido" });
-//     } else {
-//       const token = existeToken?.startsWith("Bearer ")
-//         ? existeToken.split(" ")[1]
-//         : existeToken;
-
-//       jwt.verify(token, var_env.SECRET_TOKEN, (err, userToken) => {
-//         if (err) {
-//           return res
-//             .status(500)
-//             .json({ msj: "Error: Authentication failed! 😕 ❗️❗️" });
-//         } else {
-//           return res.json({
-//             msj: "Login successfully 😃 ✔️",
-//             user: userToken,
-//           });
-//         }
-//       });
-//     }
-//   } catch (err) {
-//     console.log(err);
-//     return res.status(500).json({ msj: "Error: server 😕 ❗️❗️", err });
-//   }
-// };
 
 //? AUTH ME
 //? ***********************************************************************************************/
@@ -152,25 +159,36 @@ export const authMe = async (req: Request, res: Response) => {
     }
 
     const decoded = jwt.verify(token, var_env.SECRET_TOKEN) as {
-      id: string;
-      colegio_id: number;
+      user: {
+        id: string;
+        personal_id: number;
+        codigo_usuario: string;
+        colegio_id: number;
+      },
+      roles: {
+        id: string;
+        nombre: string;
+      }
     };
 
     // Opcional: verificar que el usuario sigue activo en BD
     const usuario = await prisma.usuario.findFirst({
-      where: { id: decoded.id, is_active: true },
+      where: { id: decoded.user.id, is_active: true },
       select: {
         id: true,
         codigo_usuario: true,
-        colegio_id: true,
       },
     });
+
 
     if (!usuario) {
       return res.status(401).json({ msj: "Usuario no válido" });
     }
 
-    return res.status(200).json({ usuario });
+    return res.status(200).json({
+      user: decoded.user,
+      roles: decoded.roles
+    });
   } catch (err) {
     // Token expirado o inválido
     return res.status(401).json({ msj: "Sesión expirada" });
