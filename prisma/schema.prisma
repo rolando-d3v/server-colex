@@ -127,6 +127,7 @@ model colegio {
   is_active      Boolean?         @default(true)
   created_at     DateTime?        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  pagina_web     String?          @db.VarChar(255)
   aula           aula[]
   bloque_horario bloque_horario[]
   curso          curso[]
@@ -362,6 +363,7 @@ model rol {
   nombre      String        @unique @db.VarChar(50)
   created_at  DateTime?     @default(now()) @db.Timestamptz(6)
   is_active   Boolean?      @default(true)
+  icono       String?
   usuario_rol usuario_rol[]
 }
 
