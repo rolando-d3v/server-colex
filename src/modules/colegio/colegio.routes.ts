@@ -1,11 +1,11 @@
 import { Router } from "express";
 
 // controllers
-import * as CtrlUser from "./colegio.controller";
+import * as CtrlColegio from "./colegio.controller";
 
 
 const router = Router();
-router.get("/role/:id", CtrlUser.getRoleUser);
+router.get("/data-colegio", CtrlColegio.getInfoColegio);
 // router.post("/create-user", CtrlUser.createUser);
 // router.get("/", CtrlUser.getUsers);
 // router.delete("/:id", CtrlRegistro.deleteRegistro);

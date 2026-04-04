@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 
 
 import authRoutes from "./modules/auth/auth.routes";
+import colegioRoutes from "./modules/colegio/colegio.routes";
 
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(
 
 
 app.use('/auth', authRoutes);
+app.use('/colegio', colegioRoutes);
 
 
 const pepe = (req: Request, res: Response)  =>  {
