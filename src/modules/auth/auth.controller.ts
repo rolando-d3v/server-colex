@@ -19,35 +19,51 @@ export const authLogin = async (req: Request, res: Response) => {
     }
 
     //? Formatear codigo a minuscula
-    const codigoFormt = codigo.toLowerCase()
-
+    const codigoFormt = codigo.toLowerCase();
 
     const users = await sql`
-                          SELECT 
-	                        	u.id,
-	                        	u.persona_id,
-	                        	u.codigo_usuario,
-	                        	u.colegio_id,
-	                        	u.password,
-	                        	u.is_active,
-	                        	json_agg(
-	                        		json_build_object(
-	                        			'id', r.id,
-	                        			'nombre', r.nombre,
-	                        			'icono', r.icono
-	                        		)
-	                        	) AS roles
-	                            FROM usuario u
-	                            INNER JOIN usuario_rol ur ON ur.usuario_id = u.id
-	                            INNER JOIN rol r ON r.id = ur.rol_id
-	                            WHERE u.codigo_usuario = ${codigoFormt}
-	                            AND u.is_active = true
-	                            AND ur.is_active = true
-	                            GROUP BY u.id;
-                        `
+                         SELECT 
+                         u.id,
+                         u.persona_id,
+                         u.codigo_usuario,
+                         u.colegio_id,
+                         u.password,
+                         u.is_active,
+                         
+                         json_build_object(
+                             'id', co.id,
+                             'nombre', co.nombre,
+                             'logo_url', co.logo_url,
+                             'dominio', co.dominio,
+                             'telefono', co.telefono,
+                             'email', co.email,
+                             'ruc', co.ruc,
+                             'pagina_web', co.pagina_web,
+                             'direccion', co.direccion,
+                             'is_active', co.is_active
+                         ) AS colegio,
+                     
+                         (
+                             SELECT json_agg(
+                                 json_build_object(
+                                     'id', r.id,
+                                     'nombre', r.nombre,
+                                     'icono', r.icono
+                                 )
+                             )
+                             FROM usuario_rol ur
+                             INNER JOIN rol r ON r.id = ur.rol_id
+                             WHERE ur.usuario_id = u.id 
+                             AND ur.is_active = true
+                         ) AS roles
+                         FROM usuario u
+                         INNER JOIN colegio co ON u.colegio_id = co.id
+                         WHERE u.codigo_usuario = ${codigoFormt}
+                         AND u.is_active = true;
+                        `;
 
-    const User = users[0]
-
+    const User = users[0];
+ 
 
     if (!User) {
       return res.status(401).json({ msj: "Credenciales inválidas ❗️" });
@@ -88,7 +104,8 @@ export const authLogin = async (req: Request, res: Response) => {
         codigo_usuario: User.codigo_usuario,
         colegio_id: User.colegio_id,
       },
-      roles: User.roles
+      colegio: User.colegio,
+      roles: User.roles,
     });
   } catch (err) {
     console.log(err);
@@ -96,10 +113,6 @@ export const authLogin = async (req: Request, res: Response) => {
     return res.status(500).json({ msj: "Error interno del servidor ❗️", err });
   }
 };
-
-
-
-
 
 //? REGISTER USER CON AUTH
 //? **********************************************************************************************/
@@ -145,8 +158,6 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 };
 
-
-
 //? AUTH ME
 //? ***********************************************************************************************/
 export const authMe = async (req: Request, res: Response) => {
@@ -163,36 +174,51 @@ export const authMe = async (req: Request, res: Response) => {
         personal_id: number;
         codigo_usuario: string;
         colegio_id: number;
-      },
+      };
     };
 
+     const users = await sql`
+                         SELECT 
+                         u.id,
+                         u.persona_id,
+                         u.codigo_usuario,
+                         u.colegio_id,
+                         u.password,
+                         u.is_active,
+                         
+                         json_build_object(
+                             'id', co.id,
+                             'nombre', co.nombre,
+                             'logo_url', co.logo_url,
+                             'dominio', co.dominio,
+                             'telefono', co.telefono,
+                             'email', co.email,
+                             'ruc', co.ruc,
+                             'pagina_web', co.pagina_web,
+                             'direccion', co.direccion,
+                             'is_active', co.is_active
+                         ) AS colegio,
+                     
+                         (
+                             SELECT json_agg(
+                                 json_build_object(
+                                     'id', r.id,
+                                     'nombre', r.nombre,
+                                     'icono', r.icono
+                                 )
+                             )
+                             FROM usuario_rol ur
+                             INNER JOIN rol r ON r.id = ur.rol_id
+                             WHERE ur.usuario_id = u.id 
+                             AND ur.is_active = true
+                         ) AS roles
+                         FROM usuario u
+                         INNER JOIN colegio co ON u.colegio_id = co.id
+                         WHERE u.codigo_usuario = ${decoded.user?.codigo_usuario}
+                         AND u.is_active = true;
+                        `;
 
-    const users = await sql`
-                          SELECT 
-	                        	u.id,
-	                        	u.persona_id,
-	                        	u.codigo_usuario,
-	                        	u.colegio_id,
-	                        	u.password,
-	                        	u.is_active,
-	                        	json_agg(
-	                        		json_build_object(
-	                        			'id', r.id,
-	                        			'nombre', r.nombre,
-	                        			'icono', r.icono
-	                        		)
-	                        	) AS roles
-	                            FROM usuario u
-	                            INNER JOIN usuario_rol ur ON ur.usuario_id = u.id
-	                            INNER JOIN rol r ON r.id = ur.rol_id
-	                            WHERE u.codigo_usuario = ${decoded.user.codigo_usuario}
-	                            AND u.is_active = true
-	                            AND ur.is_active = true
-	                            GROUP BY u.id;
-                        `
-
-    const User = users[0]
-
+    const User = users[0];
 
     if (!User) {
       return res.status(401).json({ msj: "Usuario no válido" });
@@ -205,18 +231,14 @@ export const authMe = async (req: Request, res: Response) => {
         codigo_usuario: User.codigo_usuario,
         colegio_id: User.colegio_id,
       },
-      roles: User.roles
+      colegio: User.colegio,
+      roles: User.roles,
     });
   } catch (err) {
     // Token expirado o inválido
     return res.status(401).json({ msj: "Sesión expirada" });
   }
 };
-
-
-
-
-
 
 //? AUTH LOGOUT
 //? ***********************************************************************************************/
