@@ -22,48 +22,69 @@ export const authLogin = async (req: Request, res: Response) => {
     const codigoFormt = codigo.toLowerCase();
 
     const users = await sql`
-                         SELECT 
-                         u.id,
-                         u.persona_id,
-                         u.codigo_usuario,
-                         u.colegio_id,
-                         u.password,
-                         u.is_active,
-                         
-                         json_build_object(
-                             'id', co.id,
-                             'nombre', co.nombre,
-                             'logo_url', co.logo_url,
-                             'dominio', co.dominio,
-                             'telefono', co.telefono,
-                             'email', co.email,
-                             'ruc', co.ruc,
-                             'pagina_web', co.pagina_web,
-                             'direccion', co.direccion,
-                             'is_active', co.is_active
-                         ) AS colegio,
-                     
-                         (
-                             SELECT json_agg(
-                                 json_build_object(
-                                     'id', r.id,
-                                     'nombre', r.nombre,
-                                     'icono', r.icono
-                                 )
-                             )
-                             FROM usuario_rol ur
-                             INNER JOIN rol r ON r.id = ur.rol_id
-                             WHERE ur.usuario_id = u.id 
-                             AND ur.is_active = true
-                         ) AS roles
-                         FROM usuario u
-                         INNER JOIN colegio co ON u.colegio_id = co.id
-                         WHERE u.codigo_usuario = ${codigoFormt}
-                         AND u.is_active = true;
-                        `;
+                        
+          SELECT 
+              u.id,
+              u.persona_id,
+              u.codigo_usuario,
+              u.colegio_id,
+              u.password,
+              u.is_active,
+              
+              json_build_object(
+                  'id', co.id,
+                  'nombre', co.nombre,
+                  'logo_url', co.logo_url,
+                  'dominio', co.dominio,
+                  'telefono', co.telefono,
+                  'email', co.email,
+                  'ruc', co.ruc,
+                  'pagina_web', co.pagina_web,
+                  'direccion', co.direccion,
+                  'is_active', co.is_active
+              ) AS colegio,
+          
+              (
+                  SELECT json_agg(
+                      json_build_object(
+                          'id', r.id,
+                          'nombre', r.nombre,
+                          'icono', r.icono,
+          
+                          'opciones',
+                          (
+                              SELECT json_agg(
+                                  json_build_object(
+                                      'id', op.id,
+                                      'nombre', op.nombre,
+                                      'icono', op.icono,
+                                      'rol_id', op.rol_id,
+                                      'path', op.path,
+                                      'orden', op.orden
+                                  )
+                                  ORDER BY op.orden ASC
+                              )
+                              FROM opcion op
+                              WHERE op.rol_id = r.id
+                              AND op.is_active = true
+                          )
+                      )
+                  )
+                  FROM usuario_rol ur
+                  INNER JOIN rol r ON r.id = ur.rol_id
+                  WHERE ur.usuario_id = u.id 
+                  AND ur.is_active = true
+              ) AS roles
+          
+          FROM usuario u
+          INNER JOIN colegio co ON u.colegio_id = co.id
+          WHERE u.codigo_usuario = ${codigoFormt}
+          AND u.is_active = true;
+
+          `;
 
     const User = users[0];
- 
+
 
     if (!User) {
       return res.status(401).json({ msj: "Credenciales inválidas ❗️" });
@@ -177,46 +198,66 @@ export const authMe = async (req: Request, res: Response) => {
       };
     };
 
-     const users = await sql`
-                         SELECT 
-                         u.id,
-                         u.persona_id,
-                         u.codigo_usuario,
-                         u.colegio_id,
-                         u.password,
-                         u.is_active,
-                         
-                         json_build_object(
-                             'id', co.id,
-                             'nombre', co.nombre,
-                             'logo_url', co.logo_url,
-                             'dominio', co.dominio,
-                             'telefono', co.telefono,
-                             'email', co.email,
-                             'ruc', co.ruc,
-                             'pagina_web', co.pagina_web,
-                             'direccion', co.direccion,
-                             'is_active', co.is_active
-                         ) AS colegio,
-                     
-                         (
-                             SELECT json_agg(
-                                 json_build_object(
-                                     'id', r.id,
-                                     'nombre', r.nombre,
-                                     'icono', r.icono
-                                 )
-                             )
-                             FROM usuario_rol ur
-                             INNER JOIN rol r ON r.id = ur.rol_id
-                             WHERE ur.usuario_id = u.id 
-                             AND ur.is_active = true
-                         ) AS roles
-                         FROM usuario u
-                         INNER JOIN colegio co ON u.colegio_id = co.id
-                         WHERE u.codigo_usuario = ${decoded.user?.codigo_usuario}
-                         AND u.is_active = true;
-                        `;
+    const users = await sql`
+          SELECT 
+              u.id,
+              u.persona_id,
+              u.codigo_usuario,
+              u.colegio_id,
+              u.password,
+              u.is_active,
+              
+              json_build_object(
+                  'id', co.id,
+                  'nombre', co.nombre,
+                  'logo_url', co.logo_url,
+                  'dominio', co.dominio,
+                  'telefono', co.telefono,
+                  'email', co.email,
+                  'ruc', co.ruc,
+                  'pagina_web', co.pagina_web,
+                  'direccion', co.direccion,
+                  'is_active', co.is_active
+              ) AS colegio,
+          
+              (
+                  SELECT json_agg(
+                      json_build_object(
+                          'id', r.id,
+                          'nombre', r.nombre,
+                          'icono', r.icono,
+          
+                          'opciones',
+                          (
+                              SELECT json_agg(
+                                  json_build_object(
+                                      'id', op.id,
+                                      'nombre', op.nombre,
+                                      'icono', op.icono,
+                                      'rol_id', op.rol_id,
+                                      'path', op.path,
+                                      'orden', op.orden
+                                  )
+                                  ORDER BY op.orden ASC
+                              )
+                              FROM opcion op
+                              WHERE op.rol_id = r.id
+                              AND op.is_active = true
+                          )
+                      )
+                  )
+                  FROM usuario_rol ur
+                  INNER JOIN rol r ON r.id = ur.rol_id
+                  WHERE ur.usuario_id = u.id 
+                  AND ur.is_active = true
+              ) AS roles
+          
+          FROM usuario u
+          INNER JOIN colegio co ON u.colegio_id = co.id
+          WHERE u.codigo_usuario = ${decoded.user?.codigo_usuario}
+          AND u.is_active = true;
+          
+          `;
 
     const User = users[0];
 
