@@ -16,11 +16,11 @@ export const getCurso = async (req: Request, res: Response) => {
 
   try {
 
-    const {uuid_curso_u} = req.params
+    const id_colegio = req.params.id_colegio
 
     const getInfoColex = await prisma.academico_curso.findMany({
       where:{
-       colegio_id: Number(1)
+       colegio_id: Number(id_colegio)
       },
       include: {
        academico_curso_grado: {
