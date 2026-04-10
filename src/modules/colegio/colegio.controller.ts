@@ -18,7 +18,7 @@ export const getInfoColegio = async (req: Request, res: Response) => {
 
     const {dominio} = req.params
 
-    const getInfoColex = await prisma.colegio.findFirst({
+    const getInfoColex = await prisma.academico_colegio.findFirst({
       where:{
         dominio: "localhost"
       }
