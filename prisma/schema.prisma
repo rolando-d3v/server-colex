@@ -6,3 +6,486 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model academico_asistencia {
+  id                      Int                     @id(map: "asistencia_pkey") @default(autoincrement())
+  alumno_id               Int
+  curso_docente_id        Int
+  fecha                   DateTime                @db.Date
+  estado                  String                  @db.VarChar(20)
+  observacion             String?
+  created_at              DateTime?               @default(now()) @db.Timestamptz(6)
+  is_active               Boolean?                @default(true)
+  persona_alumno          persona_alumno          @relation(fields: [alumno_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asistencia_alumno_id_fkey")
+  academico_curso_docente academico_curso_docente @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "asistencia_curso_docente_id_fkey")
+
+  @@unique([alumno_id, curso_docente_id, fecha], map: "asistencia_alumno_id_curso_docente_id_fecha_key")
+  @@index([curso_docente_id, fecha], map: "idx_asistencia_fecha")
+}
+
+model academico_aula {
+  id                       Int                        @id(map: "aula_pkey") @default(autoincrement())
+  colegio_id               Int
+  grado_id                 Int
+  seccion_id               Int
+  year                     Int
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  is_active                Boolean?                   @default(true)
+  academico_colegio        academico_colegio          @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "aula_colegio_id_fkey")
+  academico_grado          academico_grado            @relation(fields: [grado_id, colegio_id], references: [id, colegio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_aula_grado_colegio")
+  academico_seccion        academico_seccion          @relation(fields: [seccion_id, colegio_id], references: [id, colegio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_aula_seccion_colegio")
+  academico_curso_docente  academico_curso_docente[]
+  academico_matricula      academico_matricula[]
+  academico_sesion_horario academico_sesion_horario[]
+
+  @@unique([colegio_id, grado_id, seccion_id, year], map: "aula_colegio_id_grado_id_seccion_id_year_key")
+  @@index([colegio_id, year], map: "idx_aula_colegio_anio")
+}
+
+model academico_bloque_horario {
+  id                       Int                        @id(map: "bloque_horario_pkey") @default(autoincrement())
+  colegio_id               Int
+  nombre                   String                     @db.VarChar(50)
+  hora_inicio              DateTime                   @db.Time(6)
+  hora_fin                 DateTime                   @db.Time(6)
+  orden                    Int
+  es_recreo                Boolean?                   @default(false)
+  is_active                Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  academico_colegio        academico_colegio          @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bloque_horario_colegio_id_fkey")
+  academico_sesion_horario academico_sesion_horario[]
+
+  @@unique([colegio_id, hora_inicio, hora_fin], map: "bloque_horario_colegio_id_hora_inicio_hora_fin_key")
+}
+
+model academico_colegio {
+  id                       Int                        @id(map: "colegio_pkey") @default(autoincrement())
+  nombre                   String                     @db.VarChar(150)
+  ruc                      String?                    @unique(map: "colegio_ruc_key") @db.VarChar(20)
+  direccion                String?
+  telefono                 String?                    @db.VarChar(20)
+  email                    String?                    @db.VarChar(100)
+  logo_url                 String?
+  dominio                  String?                    @unique(map: "colegio_dominio_key") @db.VarChar(100)
+  is_active                Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  pagina_web               String?                    @db.VarChar(255)
+  academico_aula           academico_aula[]
+  academico_bloque_horario academico_bloque_horario[]
+  academico_curso          academico_curso[]
+  academico_curso_grado    academico_curso_grado[]
+  academico_grado          academico_grado[]
+  academico_seccion        academico_seccion[]
+  academico_sesion_horario academico_sesion_horario[]
+  auth_usuario             auth_usuario[]
+  persona                  persona[]
+}
+
+model academico_curso {
+  id                    Int                     @id(map: "curso_pkey") @default(autoincrement())
+  colegio_id            Int
+  nombre                String                  @db.VarChar(100)
+  descripcion           String?
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  is_active             Boolean?                @default(true)
+  academico_colegio     academico_colegio       @relation(fields: [colegio_id], references: [id], map: "curso_colegio_id_fkey")
+  academico_curso_grado academico_curso_grado[]
+
+  @@unique([id, colegio_id], map: "curso_id_colegio_id_unique")
+  @@index([colegio_id], map: "idx_curso_colegio")
+}
+
+model academico_curso_docente {
+  id                       Int                        @id(map: "curso_docente_pkey") @default(autoincrement())
+  curso_grado_id           Int
+  docente_id               Int
+  aula_id                  Int
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  is_active                Boolean?                   @default(true)
+  academico_asistencia     academico_asistencia[]
+  academico_aula           academico_aula             @relation(fields: [aula_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "curso_docente_aula_id_fkey")
+  academico_curso_grado    academico_curso_grado      @relation(fields: [curso_grado_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "curso_docente_curso_id_fkey")
+  persona_docente          persona_docente            @relation(fields: [docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "curso_docente_docente_id_fkey")
+  academico_evaluacion     academico_evaluacion[]
+  academico_material       academico_material[]
+  academico_sesion_horario academico_sesion_horario[]
+  academico_tarea          academico_tarea[]
+  com_anuncio              com_anuncio[]
+
+  @@unique([curso_grado_id, docente_id, aula_id], map: "curso_docente_curso_id_docente_id_aula_id_key")
+  @@index([aula_id], map: "idx_curso_docente_aula")
+  @@index([docente_id], map: "idx_curso_docente_docente")
+}
+
+model academico_curso_grado {
+  id                      Int                       @id(map: "curso_grado_pkey") @default(autoincrement())
+  curso_id                Int
+  grado_id                Int
+  colegio_id              Int
+  horas_semanales         Int?
+  es_obligatorio          Boolean?                  @default(true)
+  is_active               Boolean?                  @default(true)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  academico_curso_docente academico_curso_docente[]
+  academico_colegio       academico_colegio         @relation(fields: [colegio_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "curso_grado_colegio_id_fkey")
+  academico_curso         academico_curso           @relation(fields: [curso_id, colegio_id], references: [id, colegio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_curso_grado_curso_colegio")
+  academico_grado         academico_grado           @relation(fields: [grado_id, colegio_id], references: [id, colegio_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_curso_grado_grado_colegio")
+
+  @@unique([curso_id, grado_id], map: "curso_grado_curso_id_grado_id_key")
+}
+
+model academico_entrega {
+  id                Int             @id(map: "entrega_pkey") @default(autoincrement())
+  tarea_id          Int
+  alumno_id         Int
+  archivo_url       String?
+  comentario        String?
+  fecha             DateTime?       @default(now()) @db.Timestamp(6)
+  calificacion      Decimal?        @db.Decimal(5, 2)
+  retroalimentacion String?
+  created_at        DateTime?       @default(now()) @db.Timestamptz(6)
+  is_active         Boolean?        @default(true)
+  persona_alumno    persona_alumno  @relation(fields: [alumno_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entrega_alumno_id_fkey")
+  academico_tarea   academico_tarea @relation(fields: [tarea_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entrega_tarea_id_fkey")
+
+  @@unique([tarea_id, alumno_id], map: "entrega_tarea_id_alumno_id_key")
+  @@index([tarea_id, alumno_id], map: "idx_entrega_tarea")
+}
+
+model academico_evaluacion {
+  id                      Int                     @id(map: "evaluacion_pkey") @default(autoincrement())
+  curso_docente_id        Int
+  nombre                  String?                 @db.VarChar(100)
+  fecha                   DateTime?               @db.Date
+  peso                    Decimal?                @db.Decimal(5, 2)
+  created_at              DateTime?               @default(now()) @db.Timestamptz(6)
+  is_active               Boolean?                @default(true)
+  tipo                    String?                 @db.VarChar(50)
+  academico_curso_docente academico_curso_docente @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "evaluacion_curso_docente_id_fkey")
+  academico_nota          academico_nota[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model academico_grado {
+  id                    Int                     @id(map: "grado_pkey") @default(autoincrement())
+  colegio_id            Int
+  nombre                String                  @db.VarChar(50)
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  is_active             Boolean?                @default(true)
+  nivel                 String                  @db.VarChar(20)
+  turno                 String                  @db.VarChar(20)
+  academico_aula        academico_aula[]
+  academico_curso_grado academico_curso_grado[]
+  academico_colegio     academico_colegio       @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "grado_colegio_id_fkey")
+
+  @@unique([colegio_id, nombre, nivel, turno], map: "grado_colegio_id_nombre_key")
+  @@unique([id, colegio_id], map: "grado_id_colegio_id_unique")
+  @@unique([id, colegio_id], map: "uq_grado_colegio")
+  @@index([colegio_id], map: "idx_grado_colegio")
+}
+
+model academico_material {
+  id                      Int                     @id(map: "material_pkey") @default(autoincrement())
+  curso_docente_id        Int
+  titulo                  String                  @db.VarChar(200)
+  descripcion             String?
+  archivo_url             String?
+  tipo                    String?                 @db.VarChar(50)
+  fecha                   DateTime?               @default(now()) @db.Timestamp(6)
+  created_at              DateTime?               @default(now()) @db.Timestamptz(6)
+  is_active               Boolean?                @default(true)
+  academico_curso_docente academico_curso_docente @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "material_curso_docente_id_fkey")
+
+  @@index([curso_docente_id], map: "idx_material_curso")
+}
+
+model academico_matricula {
+  id             Int            @id(map: "matricula_pkey") @default(autoincrement())
+  alumno_id      Int
+  aula_id        Int
+  fecha          DateTime       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  estado         String?        @default("activo") @db.VarChar(20)
+  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  is_active      Boolean?       @default(true)
+  persona_alumno persona_alumno @relation(fields: [alumno_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "matricula_alumno_id_fkey")
+  academico_aula academico_aula @relation(fields: [aula_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "matricula_aula_id_fkey")
+
+  @@unique([alumno_id, aula_id], map: "matricula_alumno_id_aula_id_key")
+  @@index([alumno_id], map: "idx_matricula_alumno")
+  @@index([aula_id, estado], map: "idx_matricula_aula")
+}
+
+model academico_nota {
+  id                   Int                  @id(map: "nota_pkey") @default(autoincrement())
+  evaluacion_id        Int
+  alumno_id            Int
+  nota                 Decimal?             @db.Decimal(5, 2)
+  observacion          String?
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  is_active            Boolean?             @default(true)
+  persona_alumno       persona_alumno       @relation(fields: [alumno_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "nota_alumno_id_fkey")
+  academico_evaluacion academico_evaluacion @relation(fields: [evaluacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "nota_evaluacion_id_fkey")
+
+  @@unique([evaluacion_id, alumno_id], map: "nota_evaluacion_id_alumno_id_key")
+  @@index([evaluacion_id, alumno_id], map: "idx_nota_evaluacion")
+}
+
+model academico_seccion {
+  id                Int               @id(map: "seccion_pkey") @default(autoincrement())
+  colegio_id        Int
+  nombre            String            @db.VarChar(10)
+  created_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  is_active         Boolean?          @default(true)
+  academico_aula    academico_aula[]
+  academico_colegio academico_colegio @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "seccion_colegio_id_fkey")
+
+  @@unique([colegio_id, nombre], map: "seccion_colegio_id_nombre_key")
+  @@unique([id, colegio_id], map: "uq_seccion_colegio")
+  @@index([colegio_id], map: "idx_seccion_colegio")
+}
+
+model academico_sesion_horario {
+  id                       Int                      @id(map: "sesion_horario_pkey") @default(autoincrement())
+  colegio_id               Int
+  curso_docente_id         Int
+  aula_id                  Int
+  bloque_id                Int
+  dia_semana               Int                      @db.SmallInt
+  year                     Int
+  aula_fisica              String?                  @db.VarChar(50)
+  is_active                Boolean?                 @default(true)
+  created_at               DateTime?                @default(now()) @db.Timestamptz(6)
+  academico_aula           academico_aula           @relation(fields: [aula_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sesion_horario_aula_id_fkey")
+  academico_bloque_horario academico_bloque_horario @relation(fields: [bloque_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sesion_horario_bloque_id_fkey")
+  academico_colegio        academico_colegio        @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sesion_horario_colegio_id_fkey")
+  academico_curso_docente  academico_curso_docente  @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "sesion_horario_curso_docente_id_fkey")
+
+  @@unique([aula_id, dia_semana, bloque_id, year], map: "sesion_horario_aula_id_dia_semana_bloque_id_year_key")
+  @@unique([curso_docente_id, dia_semana, bloque_id, year], map: "sesion_horario_curso_docente_id_dia_semana_bloque_id_year_key")
+}
+
+model academico_tarea {
+  id                      Int                     @id(map: "tarea_pkey") @default(autoincrement())
+  curso_docente_id        Int
+  titulo                  String                  @db.VarChar(200)
+  descripcion             String?
+  archivo_url             String?
+  fecha_asignacion        DateTime?               @default(now()) @db.Date
+  fecha_entrega           DateTime                @db.Date
+  puntaje_maximo          Decimal?                @default(20) @db.Decimal(5, 2)
+  is_active               Boolean?                @default(true)
+  created_at              DateTime?               @default(now()) @db.Timestamptz(6)
+  academico_entrega       academico_entrega[]
+  academico_curso_docente academico_curso_docente @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarea_curso_docente_id_fkey")
+
+  @@index([curso_docente_id, fecha_entrega], map: "idx_tarea_curso_docente")
+}
+
+model auth_opcion {
+  id          Int       @id(map: "opcion_pkey") @default(autoincrement())
+  nombre      String    @db.VarChar(50)
+  rol_id      Int
+  icono       String?
+  path        String?   @db.VarChar(120)
+  description String?
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  orden       Int?      @db.SmallInt
+  auth_rol    auth_rol  @relation(fields: [rol_id], references: [id], map: "opcion_rol_id_fkey")
+}
+
+model auth_rol {
+  id               Int                @id(map: "rol_pkey") @default(autoincrement())
+  nombre           String             @unique(map: "rol_nombre_key") @db.VarChar(50)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  is_active        Boolean?           @default(true)
+  icono            String?
+  auth_opcion      auth_opcion[]
+  auth_usuario_rol auth_usuario_rol[]
+}
+
+model auth_usuario {
+  id                       String                     @id(map: "usuario_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  persona_id               String                     @db.Uuid
+  codigo_usuario           String                     @unique(map: "usuario_codigo_usuario_key") @default(dbgenerated("generar_user_code()")) @db.VarChar(20)
+  colegio_id               Int?
+  email                    String                     @db.VarChar(100)
+  password                 String
+  is_active                Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  academico_colegio        academico_colegio?         @relation(fields: [colegio_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "usuario_colegio_id_fkey")
+  persona                  persona                    @relation(fields: [persona_id], references: [id], onUpdate: Restrict, map: "usuario_persona_id_fkey")
+  auth_usuario_rol         auth_usuario_rol[]
+  com_anuncio              com_anuncio[]
+  com_anuncio_comentario   com_anuncio_comentario[]
+  com_mensaje              com_mensaje[]
+  com_mensaje_destinatario com_mensaje_destinatario[]
+
+  @@unique([colegio_id, codigo_usuario], map: "usuario_colegio_id__key_codigo_user")
+  @@index([colegio_id], map: "idx_usuario_colegio")
+  @@index([colegio_id, email], map: "idx_usuario_colegio_email")
+}
+
+model auth_usuario_rol {
+  id           Int           @id(map: "usuario_rol_pkey") @default(autoincrement())
+  usuario_id   String?       @db.Uuid
+  rol_id       Int?
+  is_active    Boolean?      @default(true)
+  created_at   DateTime?     @default(now()) @db.Timestamptz(6)
+  auth_rol     auth_rol?     @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuario_rol_rol_id_fkey")
+  auth_usuario auth_usuario? @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "usuario_rol_usuario_id_fkey")
+
+  @@unique([usuario_id, rol_id], map: "usuario_rol_usuario_id_rol_id_key")
+}
+
+model codigo_usuario_seq {
+  year      Int @id
+  secuencia Int
+}
+
+model com_anuncio {
+  id                      Int                      @id(map: "anuncio_pkey") @default(autoincrement())
+  curso_docente_id        Int
+  autor_id                String                   @db.Uuid
+  titulo                  String?                  @db.VarChar(200)
+  contenido               String
+  is_active               Boolean?                 @default(true)
+  created_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  auth_usuario            auth_usuario             @relation(fields: [autor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "anuncio_autor_id_fkey")
+  academico_curso_docente academico_curso_docente  @relation(fields: [curso_docente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "anuncio_curso_docente_id_fkey")
+  com_anuncio_comentario  com_anuncio_comentario[]
+
+  @@index([curso_docente_id], map: "idx_anuncio_curso")
+}
+
+model com_anuncio_comentario {
+  id           Int          @id(map: "anuncio_comentario_pkey") @default(autoincrement())
+  anuncio_id   Int
+  autor_id     String       @db.Uuid
+  contenido    String
+  is_active    Boolean?     @default(true)
+  created_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  com_anuncio  com_anuncio  @relation(fields: [anuncio_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "anuncio_comentario_anuncio_id_fkey")
+  auth_usuario auth_usuario @relation(fields: [autor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "anuncio_comentario_autor_id_fkey")
+}
+
+model com_mensaje {
+  id                       Int                        @id(map: "mensaje_pkey") @default(autoincrement())
+  emisor_id                String                     @db.Uuid
+  asunto                   String?                    @db.VarChar(200)
+  contenido                String
+  fecha                    DateTime?                  @default(now()) @db.Timestamp(6)
+  is_active                Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  auth_usuario             auth_usuario               @relation(fields: [emisor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mensaje_emisor_id_fkey")
+  com_mensaje_destinatario com_mensaje_destinatario[]
+}
+
+model com_mensaje_destinatario {
+  mensaje_id   Int
+  usuario_id   String       @db.Uuid
+  leido        Boolean?     @default(false)
+  fecha_leido  DateTime?    @db.Timestamp(6)
+  created_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  is_active    Boolean?     @default(true)
+  com_mensaje  com_mensaje  @relation(fields: [mensaje_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mensaje_destinatario_mensaje_id_fkey")
+  auth_usuario auth_usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mensaje_destinatario_usuario_id_fkey")
+
+  @@id([mensaje_id, usuario_id], map: "mensaje_destinatario_pkey")
+}
+
+model finanzas_pago {
+  id               Int              @id(map: "pago_pkey") @default(autoincrement())
+  pension_id       Int
+  fecha_pago       DateTime?        @default(now()) @db.Timestamp(6)
+  monto            Decimal          @db.Decimal(10, 2)
+  metodo           String?          @db.VarChar(50)
+  comprobante      String?          @db.VarChar(100)
+  is_active        Boolean?         @default(true)
+  created_at       DateTime?        @default(now()) @db.Timestamptz(6)
+  finanzas_pension finanzas_pension @relation(fields: [pension_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pago_pension_id_fkey")
+}
+
+model finanzas_pension {
+  id                Int             @id(map: "pension_pkey") @default(autoincrement())
+  alumno_id         Int
+  concepto          String?         @db.VarChar(100)
+  monto             Decimal         @db.Decimal(10, 2)
+  fecha_vencimiento DateTime        @db.Date
+  created_at        DateTime?       @default(now()) @db.Timestamptz(6)
+  is_active         Boolean?        @default(true)
+  estado_pension    String?         @default("pendiente") @db.VarChar(20)
+  finanzas_pago     finanzas_pago[]
+  persona_alumno    persona_alumno  @relation(fields: [alumno_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pension_alumno_id_fkey")
+
+  @@index([alumno_id, estado_pension], map: "idx_pension_alumno_estado")
+}
+
+model persona {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  colegio_id        Int
+  nombres           String?           @db.VarChar(100)
+  apellidos         String?           @db.VarChar(100)
+  dni               String?           @db.VarChar(20)
+  fecha_nacimiento  DateTime?         @db.Date
+  telefono          String?           @db.VarChar(20)
+  direccion         String?
+  is_active         Boolean?          @default(true)
+  created_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  foto              String?
+  auth_usuario      auth_usuario[]
+  academico_colegio academico_colegio @relation(fields: [colegio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  persona_alumno    persona_alumno?
+  persona_docente   persona_docente?
+  persona_padre     persona_padre[]
+
+  @@unique([colegio_id, dni])
+  @@index([colegio_id], map: "idx_persona_colegio")
+  @@index([colegio_id, dni], map: "idx_persona_colegio_dni")
+}
+
+model persona_alumno {
+  id                   Int                    @id(map: "alumno_pkey") @default(autoincrement())
+  persona_id           String                 @unique(map: "alumno_persona_id_key") @db.Uuid
+  codigo               String?                @db.VarChar(20)
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  is_active            Boolean?               @default(true)
+  academico_asistencia academico_asistencia[]
+  academico_entrega    academico_entrega[]
+  academico_matricula  academico_matricula[]
+  academico_nota       academico_nota[]
+  finanzas_pension     finanzas_pension[]
+  persona              persona                @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "alumno_persona_id_fkey")
+  persona_alumno_padre persona_alumno_padre[]
+}
+
+model persona_alumno_padre {
+  alumno_id      Int
+  padre_id       Int
+  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  is_active      Boolean?       @default(true)
+  persona_alumno persona_alumno @relation(fields: [alumno_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "alumno_padre_alumno_id_fkey")
+  persona_padre  persona_padre  @relation(fields: [padre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "alumno_padre_padre_id_fkey")
+
+  @@id([alumno_id, padre_id], map: "alumno_padre_pkey")
+}
+
+model persona_docente {
+  id                      Int                       @id(map: "docente_pkey") @default(autoincrement())
+  persona_id              String                    @unique(map: "docente_persona_id_key") @db.Uuid
+  especialidad            String?                   @db.VarChar(100)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  is_active               Boolean?                  @default(true)
+  academico_curso_docente academico_curso_docente[]
+  persona                 persona                   @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "docente_persona_id_fkey")
+}
+
+model persona_padre {
+  id                   Int                    @id(map: "padre_pkey") @default(autoincrement())
+  persona_id           String?                @db.Uuid
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  is_active            Boolean?               @default(true)
+  persona_alumno_padre persona_alumno_padre[]
+  persona              persona?               @relation(fields: [persona_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "padre_persona_id_fkey")
+}
