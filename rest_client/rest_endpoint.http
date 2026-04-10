@@ -7,7 +7,7 @@ GET {{host}}/colegio/data-colegio?dominio=localhost HTTP/1.1
 GET {{host}}/user/9cbdcb00-42dc-4011-b0c2-8c81831579d7 HTTP/1.1
 
 ### get all events
-GET {{host}}/events/all-events HTTP/1.1
+GET {{host}}/curso/all-curso HTTP/1.1
 
 ###
 POST {{host}}/events/create-events HTTP/1.1
