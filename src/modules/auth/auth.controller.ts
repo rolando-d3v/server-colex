@@ -64,20 +64,20 @@ export const authLogin = async (req: Request, res: Response) => {
                                   )
                                   ORDER BY op.orden ASC
                               )
-                              FROM opcion op
+                              FROM auth_opcion op
                               WHERE op.rol_id = r.id
                               AND op.is_active = true
                           )
                       )
                   )
-                  FROM usuario_rol ur
-                  INNER JOIN rol r ON r.id = ur.rol_id
+                  FROM auth_usuario_rol ur
+                  INNER JOIN auth_rol r ON r.id = ur.rol_id
                   WHERE ur.usuario_id = u.id 
                   AND ur.is_active = true
               ) AS roles
           
-          FROM usuario u
-          INNER JOIN colegio co ON u.colegio_id = co.id
+          FROM auth_usuario u
+          INNER JOIN academico_colegio co ON u.colegio_id = co.id
           WHERE u.codigo_usuario = ${codigoFormt}
           AND u.is_active = true;
 
@@ -146,7 +146,7 @@ export const registerUser = async (req: Request, res: Response) => {
   }
 
   try {
-    const userRegister = await prisma.usuario.create({
+    const userRegister = await prisma.auth_usuario.create({
       data: {
         persona_id,
         codigo_usuario,
@@ -240,20 +240,20 @@ export const authMe = async (req: Request, res: Response) => {
                                   )
                                   ORDER BY op.orden ASC
                               )
-                              FROM opcion op
+                              FROM auth_opcion op
                               WHERE op.rol_id = r.id
                               AND op.is_active = true
                           )
                       )
                   )
-                  FROM usuario_rol ur
-                  INNER JOIN rol r ON r.id = ur.rol_id
+                  FROM auth_usuario_rol ur
+                  INNER JOIN auth_rol r ON r.id = ur.rol_id
                   WHERE ur.usuario_id = u.id 
                   AND ur.is_active = true
               ) AS roles
           
-          FROM usuario u
-          INNER JOIN colegio co ON u.colegio_id = co.id
+          FROM auth_usuario u
+          INNER JOIN academico_colegio co ON u.colegio_id = co.id
           WHERE u.codigo_usuario = ${decoded.user?.codigo_usuario}
           AND u.is_active = true;
           
