@@ -294,6 +294,7 @@ model auth_opcion {
   is_active         Boolean?      @default(true)
   mensaje           Int?          @default(0) @db.SmallInt
   created_at        DateTime?     @default(now()) @db.Timestamptz(6)
+  name_active       String?       @db.VarChar(30)
   auth_opcion       auth_opcion?  @relation("auth_opcionToauth_opcion", fields: [padre_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "opcionx_padre_fkey")
   other_auth_opcion auth_opcion[] @relation("auth_opcionToauth_opcion")
   auth_rol          auth_rol      @relation(fields: [rol_id], references: [id], map: "opcionx_rol_fkey")
