@@ -337,6 +337,8 @@ export const authMe = async (req: Request, res: Response) => {
 
     const User = users[0];
 
+console.log(User);
+
     if (!User) {
       return res.status(401).json({ msj: "Usuario no válido" });
     }
@@ -403,7 +405,7 @@ export const getRoles = async (req: Request, res: Response) => {
 
 // ─── CREATE ROL ─────────────────────────────────────────────────────
 export const createRol = async (req: Request, res: Response) => {
-  const { nombre, icono, descripcion } = req.body;
+  const { nombre, icono } = req.body;
 
   if (!nombre) {
     return res.status(400).json({ msj: "El nombre del rol es requerido ❗️" });
@@ -411,8 +413,8 @@ export const createRol = async (req: Request, res: Response) => {
 
   try {
     const result = await sql`
-      INSERT INTO auth_rol (nombre, icono, descripcion, is_active)
-      VALUES (${nombre}, ${icono || null}, ${descripcion || null}, true)
+      INSERT INTO auth_rol (nombre, icono, is_active)
+      VALUES (${nombre}, ${icono || null}, true)
       RETURNING *
     `;
     return res.status(201).json({
@@ -431,15 +433,17 @@ export const createRol = async (req: Request, res: Response) => {
 // ─── UPDATE ROL ─────────────────────────────────────────────────────
 export const updateRol = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { nombre, icono, descripcion } = req.body;
+  const { nombre, icono } = req.body;
+
+  console.log("indexxxxxxxxx" + id);
+  
 
   try {
     const result = await sql`
       UPDATE auth_rol
       SET 
         nombre = ${nombre},
-        icono = ${icono || null},
-        descripcion = ${descripcion || null}
+        icono = ${icono || null}
       WHERE id = ${id}
       RETURNING *
     `;
@@ -525,6 +529,25 @@ export const createOpcion = async (req: Request, res: Response) => {
   }
 
   try {
+
+
+
+const result2 = await sql`
+  SELECT EXISTS (
+    SELECT 1
+    FROM auth_opcion
+    WHERE padre_id IS NULL AND rol_id = ${rol_id}
+  ) AS "tieneHijo"
+`;
+
+const tieneHijo = result2[0].tieneHijo;
+
+console.log(tieneHijo); // true o false
+
+
+
+
+
     const result = await sql`
       INSERT INTO auth_opcion (
         nombre, 
@@ -588,7 +611,7 @@ export const updateOpcion = async (req: Request, res: Response) => {
   }
 };
 
-// ─── DELETE OPCION (soft delete) ────────────────────────────────────
+// ─── DELETE OPCION (ok delete) ────────────────────────────────────
 export const deleteOpcion = async (req: Request, res: Response) => {
   const { id } = req.params;
 
