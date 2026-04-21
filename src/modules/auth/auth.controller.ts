@@ -594,16 +594,21 @@ export const deleteOpcion = async (req: Request, res: Response) => {
 
   try {
     // Primero desactivar los hijos
-    await sql`
-      UPDATE auth_opcion
-      SET is_active = false
-      WHERE padre_id = ${id}
-    `;
-
     const result = await sql`
+      WITH RECURSIVE tree AS (
+        SELECT id
+        FROM auth_opcion
+        WHERE id = ${id}
+
+        UNION ALL
+
+        SELECT child.id
+        FROM auth_opcion child
+        INNER JOIN tree t ON child.padre_id = t.id
+      )
       UPDATE auth_opcion
-      SET is_active = false
-      WHERE id = ${id}
+      SET is_active = false, name_active = 'eliminado'
+      WHERE id IN (SELECT id FROM tree)
       RETURNING *
     `;
 
